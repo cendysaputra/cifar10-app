@@ -18,9 +18,17 @@ def get_model():
 
 def preprocess(image):
     image = image.convert("RGB")
+    image.thumbnail((512, 512))
     image = image.resize((32, 32))
-    array = np.array(image) / 255.0
+    array = np.array(image, dtype=np.float32) / 255.0
     return np.expand_dims(array, axis=0)
+
+
+def load_for_preview(uploaded_file):
+    image = Image.open(uploaded_file)
+    image = image.convert("RGB")
+    image.thumbnail((512, 512))
+    return image
 
 
 st.set_page_config(
@@ -45,7 +53,7 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+    image = load_for_preview(uploaded_file)
 
     col1, col2 = st.columns([1, 1.3])
 
