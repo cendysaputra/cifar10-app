@@ -1,0 +1,159 @@
+button[title="View fullscreen"] {display: none;}
+
+.stElementToolbar {
+    display: none;
+}
+
+.block-container {
+    max-width: 100%;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    padding-left: 5rem;
+    padding-right: 5rem;
+    min-height: 90vh;
+}
+
+@media(max-width: 921px) {
+   .block-container {
+      max-width: 100%;
+      padding-top: 3rem;
+      padding-bottom: 2rem;
+      padding-left: 24px;
+      padding-right: 24px;
+      min-height: 90vh;
+   }
+}
+
+@media(max-width: 544px) {
+   .block-container {
+      max-width: 100%;
+      padding-top: 3rem;
+      padding-bottom: 2rem;
+      padding-left: 16px;
+      padding-right: 16px;
+      min-height: 90vh;
+   }
+}
+
+.stHorizontalBlock {
+    align-items: stretch;
+}
+
+.stHorizontalBlock > * {
+    border: 1px solid #EEE;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.stHorizontalBlock > * > div {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+[data-testid="stImageContainer"] {
+    width: 100% !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+[data-testid="stImageContainer"] img {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1;
+    min-height: 0;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+[data-testid="stImageCaption"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+[data-testid="stImageCaption"] p {
+    font-size: 15px !important;
+    color: #1f2933 !important;
+}
+
+[data-testid="stFileUploader"] label p {
+    font-size: 15px !important;
+    color: #1f2933 !important;
+    font-weight: 500;
+}
+
+.hasil-utama {
+    background-color: #f0f4f9;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+}
+
+.hasil-label {
+    font-size: 15px;
+    color: #3d4753;
+    margin-bottom: 4px;
+}
+.hasil-kelas {
+    font-size: 34px;
+    font-weight: 700;
+    color: #12181f;
+    line-height: 1.2;
+}
+
+.hasil-yakin {
+    font-size: 16px;
+    color: #3d4753;
+    margin-top: 6px;
+}
+
+.bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    font-weight: 500;
+    color: #12181f;
+    margin-bottom: 6px;
+}
+
+.bar-track {
+    height: 4px;
+    background-color: #e6eaef;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 18px;
+}
+
+.bar-fill {
+    height: 100%;
+    background-color: #2f6feb;
+    border-radius: 5px;
+}
+
+.judul-top3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #3d4753;
+    margin-bottom: 12px;
+}
+
+.footer-identitas {
+    font-size: 15px;
+    color: #5b6470;
+    margin-bottom: 2rem;
+}
+
+.footer-kelas {
+    font-size: 15px;
+    color: #5b6470;
+}
+
+.etxdrby3 {
+   display: none;
+}
