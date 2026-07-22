@@ -50,7 +50,7 @@ if uploaded_file is not None:
     col1, col2 = st.columns([1, 1.3])
 
     with col1:
-        st.image(image, caption="Gambar Diupload", use_container_width=True)
+        st.image(image, caption="Gambar Diupload", width="stretch")
 
     with col2:
         prediction = model.predict(preprocess(image))[0]
