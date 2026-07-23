@@ -70,7 +70,7 @@ if uploaded_file is not None:
             <div class="hasil-utama">
                 <div class="hasil-label">Terprediksi</div>
                 <div class="hasil-kelas">{class_names[predicted_index]}</div>
-                <div class="hasil-yakin">Akurasi: {confidence:.2%}</div>
+                <div class="hasil-yakin">Probabilitas: {confidence:.2%}</div>
             </div>
             """,
             unsafe_allow_html=True
