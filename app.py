@@ -13,7 +13,7 @@ class_names = [
 
 @st.cache_resource
 def get_model():
-    return load_model("model_cnn_cifar10_v2.h5")
+    return load_model("model_cnn_cifar10_v3.h5")
 
 
 def preprocess(image):
