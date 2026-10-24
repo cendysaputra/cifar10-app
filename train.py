@@ -4,6 +4,8 @@ Input model: gambar RGB 32x32 dengan nilai piksel 0-1 (sama seperti preprocess d
 Jalankan: python train.py [--epochs 40] [--output model_cnn_cifar10_v3.h5]
 """
 import argparse
+import math
+import time
 
 import numpy as np
 import tensorflow as tf
@@ -59,23 +61,61 @@ def make_datasets(batch_size):
     return train_ds, test_ds
 
 
+class TimeBudget(keras.callbacks.Callback):
+    """Kurangi jumlah epoch agar training selesai dalam batas waktu (mis. job CI)."""
+
+    def __init__(self, state, budget_minutes):
+        super().__init__()
+        self.state = state
+        self.budget = budget_minutes * 60
+
+    def on_train_begin(self, logs=None):
+        self.start = time.time()
+
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch == 0:
+            per_epoch = time.time() - self.start
+            fit = max(3, int(self.budget / per_epoch))
+            if fit < self.state["epochs"]:
+                print(f"\nBatas waktu: epoch dikurangi {self.state['epochs']} -> {fit}")
+                self.state["epochs"] = fit
+        if epoch + 1 >= self.state["epochs"]:
+            self.model.stop_training = True
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--output", default="model_cnn_cifar10_v3.h5")
+    parser.add_argument("--time-budget-minutes", type=float, default=None)
     args = parser.parse_args()
 
     keras.utils.set_random_seed(42)
     train_ds, test_ds = make_datasets(args.batch_size)
 
-    steps = args.epochs * len(train_ds)
-    lr = keras.optimizers.schedules.CosineDecay(
-        0.0, steps, warmup_target=2e-3, warmup_steps=len(train_ds) * 2
-    )
+    # Warmup 2 epoch lalu cosine decay; total epoch bisa dikurangi TimeBudget.
+    state = {"epochs": args.epochs}
+    peak_lr, warmup = 2e-3, 2
+
+    def lr_at(epoch):
+        if epoch < warmup:
+            return peak_lr * (epoch + 1) / warmup
+        progress = (epoch - warmup) / max(1, state["epochs"] - warmup)
+        return 0.5 * peak_lr * (1 + math.cos(math.pi * min(1.0, progress)))
+
+    callbacks = [
+        keras.callbacks.LearningRateScheduler(lr_at),
+        keras.callbacks.ModelCheckpoint(
+            args.output, monitor="val_accuracy", save_best_only=True
+        ),
+    ]
+    if args.time_budget_minutes:
+        callbacks.append(TimeBudget(state, args.time_budget_minutes))
+
     model = build_model()
     model.compile(
-        optimizer=keras.optimizers.AdamW(lr, weight_decay=1e-4),
+        optimizer=keras.optimizers.AdamW(peak_lr, weight_decay=1e-4),
         loss=keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
         metrics=["accuracy"],
     )
@@ -85,9 +125,7 @@ def main():
         train_ds,
         validation_data=test_ds,
         epochs=args.epochs,
-        callbacks=[keras.callbacks.ModelCheckpoint(
-            args.output, monitor="val_accuracy", save_best_only=True
-        )],
+        callbacks=callbacks,
     )
 
     best = keras.models.load_model(args.output)
