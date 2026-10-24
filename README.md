@@ -8,7 +8,9 @@ Aplikasi dibangun dengan Streamlit dan menggunakan model TensorFlow/Keras.
 
 - `app.py` — kode utama aplikasi Streamlit
 - `requirements.txt` — daftar dependensi
-- `model_cnn_cifar10_v2.h5` — model CNN hasil pelatihan
+- `model_cnn_cifar10_v3.h5` — model CNN hasil pelatihan
+- `train.py` — script untuk melatih ulang model
+- `.github/workflows/train-model.yml` — workflow GitHub Actions untuk training otomatis
 - `README.md` — dokumentasi proyek
 
 ## Menjalankan Secara Lokal
@@ -23,6 +25,17 @@ Jalankan aplikasi:
 
 ```
 streamlit run app.py
+```
+
+## Melatih Ulang Model
+
+Model dilatih otomatis oleh GitHub Actions setiap kali `train.py` berubah, atau manual lewat tab **Actions → Train model → Run workflow**. Model hasil training di-commit ke branch yang sama dengan nama file sesuai `MODEL_FILE` di workflow.
+
+Training juga bisa dijalankan secara lokal:
+
+```
+pip install tensorflow-cpu==2.21.0
+python train.py --epochs 60
 ```
 
 ## Deployment

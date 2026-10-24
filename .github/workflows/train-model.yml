@@ -1,0 +1,56 @@
+name: Train model
+
+# Melatih ulang model CIFAR-10 di runner GitHub (dataset diunduh otomatis oleh Keras),
+# lalu commit model hasil training kembali ke branch yang sama.
+on:
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: Jumlah epoch maksimum
+        default: "60"
+  push:
+    paths:
+      - train.py
+      - .github/workflows/train-model.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: train-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MODEL_FILE: model_cnn_cifar10_v4.h5
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install tensorflow-cpu==2.21.0
+
+      - name: Train
+        run: |
+          python train.py \
+            --epochs "${{ github.event.inputs.epochs || '60' }}" \
+            --time-budget-minutes 300 \
+            --output "$MODEL_FILE"
+
+      - name: Commit model
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$MODEL_FILE"
+          git commit -m "Update trained model (run ${{ github.run_id }})"
+          # Branch bisa berubah selama training; rebase dulu agar push tidak ditolak.
+          git pull --rebase
+          git push
