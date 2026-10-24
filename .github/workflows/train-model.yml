@@ -7,7 +7,7 @@ on:
     inputs:
       epochs:
         description: Jumlah epoch maksimum
-        default: "40"
+        default: "60"
   push:
     paths:
       - train.py
@@ -19,6 +19,9 @@ permissions:
 concurrency:
   group: train-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  MODEL_FILE: model_cnn_cifar10_v4.h5
 
 jobs:
   train:
@@ -38,14 +41,16 @@ jobs:
       - name: Train
         run: |
           python train.py \
-            --epochs "${{ github.event.inputs.epochs || '40' }}" \
+            --epochs "${{ github.event.inputs.epochs || '60' }}" \
             --time-budget-minutes 300 \
-            --output model_cnn_cifar10_v3.h5
+            --output "$MODEL_FILE"
 
       - name: Commit model
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add model_cnn_cifar10_v3.h5
+          git add "$MODEL_FILE"
           git commit -m "Update trained model (run ${{ github.run_id }})"
+          # Branch bisa berubah selama training; rebase dulu agar push tidak ditolak.
+          git pull --rebase
           git push

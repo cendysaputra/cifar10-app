@@ -1,7 +1,7 @@
 """Training ulang model CNN CIFAR-10.
 
 Input model: gambar RGB 32x32 dengan nilai piksel 0-1 (sama seperti preprocess di app.py).
-Jalankan: python train.py [--epochs 40] [--output model_cnn_cifar10_v3.h5]
+Jalankan: python train.py [--epochs 60] [--output model_cnn_cifar10_v4.h5]
 """
 import argparse
 import math
@@ -14,23 +14,43 @@ from tensorflow.keras import layers
 
 
 def build_model():
-    def conv_block(x, filters, dropout):
-        for _ in range(2):
-            x = layers.Conv2D(filters, 3, padding="same", use_bias=False,
-                              kernel_regularizer=keras.regularizers.l2(5e-4))(x)
-            x = layers.BatchNormalization()(x)
-            x = layers.Activation("relu")(x)
-        x = layers.MaxPooling2D()(x)
-        return layers.Dropout(dropout)(x)
+    """ResNet kecil: 3 stage (64/128/256 filter) x 2 residual block."""
+    reg = keras.regularizers.l2(5e-4)
+
+    def conv_bn(x, filters, kernel, strides=1):
+        x = layers.Conv2D(filters, kernel, strides=strides, padding="same",
+                          use_bias=False, kernel_regularizer=reg)(x)
+        return layers.BatchNormalization()(x)
+
+    def res_block(x, filters, strides):
+        shortcut = x
+        y = layers.Activation("relu")(conv_bn(x, filters, 3, strides))
+        y = conv_bn(y, filters, 3)
+        if strides != 1 or x.shape[-1] != filters:
+            shortcut = conv_bn(x, filters, 1, strides)
+        return layers.Activation("relu")(layers.Add()([y, shortcut]))
 
     inputs = keras.Input(shape=(32, 32, 3))
-    x = conv_block(inputs, 64, 0.2)
-    x = conv_block(x, 128, 0.3)
-    x = conv_block(x, 256, 0.4)
+    x = layers.Activation("relu")(conv_bn(inputs, 64, 3))
+    for filters, strides in [(64, 1), (128, 2), (256, 2)]:
+        x = res_block(x, filters, strides)
+        x = res_block(x, filters, 1)
     x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dropout(0.4)(x)
     outputs = layers.Dense(10, activation="softmax")(x)
     return keras.Model(inputs, outputs)
+
+
+def cutout(images, size=8):
+    """Tutup satu kotak acak size x size per gambar dengan nol."""
+    batch = tf.shape(images)[0]
+    cy = tf.random.uniform([batch, 1, 1, 1], 0, 32, dtype=tf.int32)
+    cx = tf.random.uniform([batch, 1, 1, 1], 0, 32, dtype=tf.int32)
+    ys = tf.range(32)[None, :, None, None]
+    xs = tf.range(32)[None, None, :, None]
+    half = size // 2
+    mask = ((ys >= cy - half) & (ys < cy + half)
+            & (xs >= cx - half) & (xs < cx + half))
+    return tf.where(mask, tf.zeros_like(images), images)
 
 
 def make_datasets(batch_size):
@@ -49,7 +69,7 @@ def make_datasets(batch_size):
         tf.data.Dataset.from_tensor_slices((x_train, y_train))
         .shuffle(50000)
         .batch(batch_size)
-        .map(lambda x, y: (augment(x, training=True), y),
+        .map(lambda x, y: (cutout(augment(x, training=True)), y),
              num_parallel_calls=tf.data.AUTOTUNE)
         .prefetch(tf.data.AUTOTUNE)
     )
@@ -85,9 +105,9 @@ class TimeBudget(keras.callbacks.Callback):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=40)
+    parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--output", default="model_cnn_cifar10_v3.h5")
+    parser.add_argument("--output", default="model_cnn_cifar10_v4.h5")
     parser.add_argument("--time-budget-minutes", type=float, default=None)
     args = parser.parse_args()
 

@@ -29,13 +29,13 @@ streamlit run app.py
 
 ## Melatih Ulang Model
 
-Model dilatih otomatis oleh GitHub Actions setiap kali `train.py` berubah, atau manual lewat tab **Actions → Train model → Run workflow**. Model hasil training di-commit ke branch yang sama sebagai `model_cnn_cifar10_v3.h5`.
+Model dilatih otomatis oleh GitHub Actions setiap kali `train.py` berubah, atau manual lewat tab **Actions → Train model → Run workflow**. Model hasil training di-commit ke branch yang sama dengan nama file sesuai `MODEL_FILE` di workflow.
 
 Training juga bisa dijalankan secara lokal:
 
 ```
 pip install tensorflow-cpu==2.21.0
-python train.py --epochs 40
+python train.py --epochs 60
 ```
 
 ## Deployment
