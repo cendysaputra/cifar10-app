@@ -8,7 +8,7 @@ Aplikasi dibangun dengan Streamlit dan menggunakan model TensorFlow/Keras.
 
 - `app.py` — kode utama aplikasi Streamlit
 - `requirements.txt` — daftar dependensi
-- `model_cnn_cifar10_v3.h5` — model CNN hasil pelatihan
+- `model_cnn_cifar10_v4.h5` — model CNN hasil pelatihan
 - `train.py` — script untuk melatih ulang model
 - `.github/workflows/train-model.yml` — workflow GitHub Actions untuk training otomatis
 - `README.md` — dokumentasi proyek

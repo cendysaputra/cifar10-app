@@ -8,7 +8,11 @@ on:
       epochs:
         description: Jumlah epoch maksimum
         default: "60"
+  # Tidak jalan di main: merge PR tidak boleh melatih ulang dan menimpa model
+  # yang sudah dipilih di PR.
   push:
+    branches-ignore:
+      - main
     paths:
       - train.py
       - .github/workflows/train-model.yml
