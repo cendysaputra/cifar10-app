@@ -7,7 +7,35 @@ Aplikasi web untuk mengklasifikasikan satu foto. Ada dua mode:
 
 ## Mode CIFAR-10
 
-Modelnya CNN kecil bergaya ResNet (`model_cnn_cifar10_v4.h5`). Pada data uji CIFAR-10, model v4 ini dilaporkan mencapai akurasi 91,24%. Foto biasa tidak akan setepat itu: sebelum diprediksi, gambar ditegakkan menurut data EXIF, di-crop persegi dari tengah jika tidak persegi, lalu diperkecil menjadi 32×32 piksel dengan nilai warna 0–1. Jika probabilitas tertinggi di bawah 50%, halaman menampilkan peringatan.
+Modelnya ResNet-18 untuk CIFAR (`model_cnn_cifar10_v5.h5`, 11,17 juta parameter, 45 MB). Pada 10.000 gambar uji CIFAR-10 resmi, diukur sekali setelah pelatihan selesai:
+
+- **95,71%** satu tampilan (9.571/10.000)
+- **96,06%** rata-rata dengan cermin horizontal (9.606/10.000). Aplikasi memakai angka ini.
+
+Foto biasa tidak akan setepat itu: sebelum diprediksi, gambar ditegakkan menurut data EXIF, di-crop persegi dari tengah jika tidak persegi, lalu diperkecil menjadi 32×32 piksel dengan nilai warna 0–1. Model menormalisasi warna di dalamnya. Prediksi merata-ratakan gambar dengan cermin horizontalnya. Jika probabilitas tertinggi di bawah 50%, halaman menampilkan peringatan.
+
+Satu gambar di mesin latihan memakan sekitar 38 ms, atau 46 ms untuk dua tampilan (cermin). Model v4 sebelumnya sekitar 26 ms untuk satu tampilan.
+
+### Cara angka uji didapat
+
+Himpunan latih resmi 50.000 gambar dibagi dengan seed 42: 45.000 untuk pelatihan dan 5.000 untuk validasi (500 gambar per kelas). Himpunan uji tidak dipakai untuk melatih atau memilih checkpoint. Checkpoint terbaik adalah epoch 196 menurut akurasi validasi dengan cermin horizontal (96,48% pada 5.000 gambar validasi; 96,24% tanpa cermin). Angka itu bukan akurasi uji.
+
+Resepnya: pad 4 lalu crop acak, flip horizontal, Cutout 16, SGD Nesterov momentum 0,9, weight decay 5e-4, batch 128, 200 epoch, learning rate 0,1 yang turun 5× setelah epoch 60, 120, dan 160. Mesin ini tidak punya GPU. Pelatihan memakai 4 inti CPU dengan komputasi bfloat16 dan bobot float32, selama 23.566,9 detik (6,55 jam). Ekspor Keras dicek terhadap PyTorch sampai selisih probabilitas di bawah 1e-6.
+
+Bukti yang di-commit:
+
+- [Log pelatihan lengkap](results/train_log.txt), termasuk evaluasi uji di akhir
+- [Metrik JSON](results/metrics.json): akurasi uji, per kelas, epoch, seed, perangkat, tanggal
+- [Matriks konfusi uji, cermin horizontal](results/confusion_matrix_tta.png)
+- [SHA-256 model](results/model_sha256.txt): `539a2abe2e9145eeaff34e21a295d77bf12c4db5f0967143db98467b08d52b71`
+
+Mengukur ulang berkas yang sama, tanpa melatih:
+
+```bash
+python scripts/eval_cifar_test.py
+```
+
+Perintah itu mencetak 9.571/10.000 dan 9.606/10.000. `--write-results` menulis ulang JSON, gambar, dan checksum.
 
 Mode ini hanya memuat TensorFlow saat dipilih.
 
@@ -37,8 +65,11 @@ Pada mesin uji, session CLIP memakai sekitar 200 MB RAM setelah Streamlit dimuat
 - `data/general_label_embeddings.npz` — embedding teks yang sudah dihitung
 - `scripts/build_general_embeddings.py` — bangun ulang embedding itu (bukan dependensi runtime)
 - `style.css` — tampilan hasil prediksi
-- `model_cnn_cifar10_v4.h5` — model CIFAR-10 yang dipakai aplikasi
+- `model_cnn_cifar10_v5.h5` — model CIFAR-10 yang dipakai aplikasi
 - `train.py` — pelatihan ulang model
+- `requirements-train.txt` — PyTorch CPU, hanya untuk pelatihan
+- `scripts/eval_cifar_test.py` — ukur ulang akurasi uji pada berkas model
+- `results/` — log pelatihan, metrik, matriks konfusi, dan SHA-256 model
 - `requirements.txt` — dependensi aplikasi
 - `requirements-dev.txt` — dependensi aplikasi plus pytest
 - `runtime.txt` — Python 3.11 untuk Streamlit Community Cloud
@@ -84,16 +115,14 @@ python scripts/build_general_embeddings.py
 
 ## Melatih Ulang Model
 
-Model dilatih otomatis oleh GitHub Actions setiap kali `train.py` atau workflow pelatihannya berubah di branch selain `main`, atau secara manual lewat **Actions → Train model → Run workflow**. Model hasil training di-commit kembali ke branch yang sama.
-
-Pelatihan lokal:
+Pelatihan 200 epoch tidak muat di batas waktu runner GitHub, jadi workflow **Actions → Train model → Run workflow** hanya dijalankan manual dan berhenti sesuai batas waktu. Model yang ada di repositori dilatih dengan skrip yang sama di luar runner.
 
 ```bash
-pip install -r requirements.txt
-python train.py --epochs 60
+pip install -r requirements.txt -r requirements-train.txt
+python train.py --epochs 200
 ```
 
-Perintah itu mengunduh CIFAR-10 lewat Keras dan menulis `model_cnn_cifar10_v4.h5`.
+Perintah itu mengunduh CIFAR-10, menahan 5.000 gambar latih sebagai validasi, dan menulis `model_cnn_cifar10_v5.h5`. Himpunan uji baru dibaca setelah jadwal selesai.
 
 ## Deployment
 
@@ -104,4 +133,4 @@ Aplikasi di-deploy lewat Streamlit Community Cloud dari repositori ini.
 - Dependensi: `requirements.txt` (TensorFlow untuk CIFAR-10, ONNX Runtime untuk mode Umum)
 - Unggahan dibatasi 5 MB di `.streamlit/config.toml`
 
-Berkas `model_cnn_cifar10_v4.h5` harus tetap ada di repositori agar mode CIFAR-10 dapat memuatnya. Bobot CLIP tidak di-commit; server mengunduhnya dari Hugging Face saat mode Umum pertama kali dipakai. Jangan menyimpan rahasia di kode; jika suatu saat diperlukan, gunakan `.streamlit/secrets.toml`, yang tidak di-commit.
+Berkas `model_cnn_cifar10_v5.h5` harus tetap ada di repositori agar mode CIFAR-10 dapat memuatnya. Repositori ini tidak memakai Git LFS; berkas model 45 MB masih di bawah batas 100 MB GitHub. Bobot CLIP tidak di-commit; server mengunduhnya dari Hugging Face saat mode Umum pertama kali dipakai. Jangan menyimpan rahasia di kode; jika suatu saat diperlukan, gunakan `.streamlit/secrets.toml`, yang tidak di-commit.
