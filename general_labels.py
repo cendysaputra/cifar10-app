@@ -1,0 +1,382 @@
+"""Daftar label mode Umum.
+
+Prompt bahasa Inggris dipakai CLIP. Nama yang tampil di aplikasi bahasa Indonesia.
+Embedding teks untuk prompt ini ada di data/general_label_embeddings.npz.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class GeneralLabel:
+    key: str
+    name_en: str
+    name_id: str
+    category: str
+    prompts: tuple[str, ...] = ()
+
+
+# Kalimat kosong memakai satu prompt bawaan. Label di bawah ini punya beberapa
+# prompt karena itu yang membedakan orang, rumah, dan batu pada foto sungguhan.
+SPECIAL_PROMPTS: dict[str, tuple[str, ...]] = {
+    "person": (
+        "a photo of a person.",
+        "a portrait of a person.",
+        "a photo of a human.",
+        "a photograph of a person.",
+    ),
+    "man": (
+        "a photo of a man.",
+        "a portrait photograph of a man.",
+        "a photo of a smiling man.",
+        "a photo of a young man.",
+    ),
+    "woman": (
+        "a photo of a woman.",
+        "a portrait photograph of a woman.",
+        "a photo of a young woman.",
+        "a photo of a woman's face.",
+    ),
+    "child": (
+        "a photo of a toddler.",
+        "a photo of a small child playing outside.",
+    ),
+    "baby": (
+        "a photo of a baby.",
+        "a portrait of a baby.",
+    ),
+    "house": (
+        "a photo of a house.",
+        "a photo of a residential house.",
+        "a photo of the front of a house.",
+    ),
+    "rock": (
+        "a photo of a rock.",
+        "a photo of a stone.",
+        "a photo of a boulder.",
+        "a photo of a large boulder.",
+        "a close-up photo of rocks.",
+    ),
+    "glasses": (
+        "a product photo of eyeglasses.",
+        "a photo of eyeglasses sitting on a table.",
+    ),
+}
+
+# Bukan label. Dipakai untuk menandai gambar yang tidak mirip apa pun.
+NULL_PROMPTS: tuple[str, ...] = (
+    "a random image.",
+    "an abstract image.",
+    "a blurry photo.",
+)
+
+CATEGORIES: tuple[tuple[str, str], ...] = (
+    ("orang", "Orang"),
+    ("bangunan", "Bangunan"),
+    ("alam", "Alam"),
+    ("hewan", "Hewan"),
+    ("makanan", "Makanan"),
+    ("kendaraan", "Kendaraan"),
+    ("benda", "Benda"),
+    ("pakaian", "Pakaian"),
+    ("tempat", "Tempat"),
+)
+
+_ROWS: tuple[tuple[str, str, str, str], ...] = (
+    ('person', 'person', 'Orang', 'orang'),
+    ('man', 'man', 'Pria', 'orang'),
+    ('woman', 'woman', 'Wanita', 'orang'),
+    ('child', 'child', 'Anak', 'orang'),
+    ('baby', 'baby', 'Bayi', 'orang'),
+    ('crowd', 'crowd of people', 'Kerumunan', 'orang'),
+    ('hand', 'human hand', 'Tangan', 'orang'),
+    ('house', 'house', 'Rumah', 'bangunan'),
+    ('building', 'building', 'Bangunan', 'bangunan'),
+    ('apartment building', 'apartment building', 'Apartemen', 'bangunan'),
+    ('skyscraper', 'skyscraper', 'Pencakar langit', 'bangunan'),
+    ('cabin', 'cabin', 'Kabin', 'bangunan'),
+    ('hut', 'hut', 'Gubuk', 'bangunan'),
+    ('cottage', 'cottage', 'Pondok', 'bangunan'),
+    ('barn', 'barn', 'Lumbung', 'bangunan'),
+    ('church', 'church', 'Gereja', 'bangunan'),
+    ('mosque', 'mosque', 'Masjid', 'bangunan'),
+    ('temple', 'temple', 'Kuil', 'bangunan'),
+    ('castle', 'castle', 'Kastil', 'bangunan'),
+    ('bridge', 'bridge', 'Jembatan', 'bangunan'),
+    ('tower', 'tower', 'Menara', 'bangunan'),
+    ('lighthouse', 'lighthouse', 'Mercusuar', 'bangunan'),
+    ('school', 'school', 'Sekolah', 'bangunan'),
+    ('hospital', 'hospital', 'Rumah sakit', 'bangunan'),
+    ('office building', 'office building', 'Gedung perkantoran', 'bangunan'),
+    ('garage', 'garage', 'Garasi', 'bangunan'),
+    ('tent', 'tent', 'Tenda', 'bangunan'),
+    ('fence', 'fence', 'Pagar', 'bangunan'),
+    ('stairs', 'stairs', 'Tangga', 'bangunan'),
+    ('door', 'door', 'Pintu', 'bangunan'),
+    ('window', 'window', 'Jendela', 'bangunan'),
+    ('roof', 'roof', 'Atap', 'bangunan'),
+    ('rock', 'rock', 'Batu', 'alam'),
+    ('pebble', 'pebble', 'Kerikil', 'alam'),
+    ('gravel', 'gravel', 'Kerikil kasar', 'alam'),
+    ('mountain', 'mountain', 'Gunung', 'alam'),
+    ('cliff', 'cliff', 'Tebing', 'alam'),
+    ('cave', 'cave', 'Gua', 'alam'),
+    ('sand', 'sand', 'Pasir', 'alam'),
+    ('desert', 'desert', 'Gurun', 'alam'),
+    ('soil', 'soil', 'Tanah', 'alam'),
+    ('mud', 'mud', 'Lumpur', 'alam'),
+    ('hill', 'hill', 'Bukit', 'alam'),
+    ('volcano', 'volcano', 'Gunung berapi', 'alam'),
+    ('canyon', 'canyon', 'Ngarai', 'alam'),
+    ('waterfall', 'waterfall', 'Air terjun', 'alam'),
+    ('river', 'river', 'Sungai', 'alam'),
+    ('lake', 'lake', 'Danau', 'alam'),
+    ('ocean', 'ocean', 'Laut', 'alam'),
+    ('beach', 'beach', 'Pantai', 'alam'),
+    ('wave', 'wave', 'Ombak', 'alam'),
+    ('island', 'island', 'Pulau', 'alam'),
+    ('sky', 'sky', 'Langit', 'alam'),
+    ('cloud', 'cloud', 'Awan', 'alam'),
+    ('sun', 'sun', 'Matahari', 'alam'),
+    ('moon', 'moon', 'Bulan', 'alam'),
+    ('star', 'star', 'Bintang', 'alam'),
+    ('snow', 'snow', 'Salju', 'alam'),
+    ('ice', 'ice', 'Es', 'alam'),
+    ('rain', 'rain', 'Hujan', 'alam'),
+    ('rainbow', 'rainbow', 'Pelangi', 'alam'),
+    ('grass', 'grass', 'Rumput', 'alam'),
+    ('tree', 'tree', 'Pohon', 'alam'),
+    ('forest', 'forest', 'Hutan', 'alam'),
+    ('flower', 'flower', 'Bunga', 'alam'),
+    ('plant', 'plant', 'Tanaman', 'alam'),
+    ('leaf', 'leaf', 'Daun', 'alam'),
+    ('garden', 'garden', 'Taman', 'alam'),
+    ('field', 'field', 'Ladang', 'alam'),
+    ('park', 'park', 'Taman kota', 'alam'),
+    ('bush', 'bush', 'Semak', 'alam'),
+    ('dog', 'dog', 'Anjing', 'hewan'),
+    ('cat', 'cat', 'Kucing', 'hewan'),
+    ('bird', 'bird', 'Burung', 'hewan'),
+    ('horse', 'horse', 'Kuda', 'hewan'),
+    ('fish', 'fish', 'Ikan', 'hewan'),
+    ('cow', 'cow', 'Sapi', 'hewan'),
+    ('sheep', 'sheep', 'Domba', 'hewan'),
+    ('goat', 'goat', 'Kambing', 'hewan'),
+    ('pig', 'pig', 'Babi', 'hewan'),
+    ('elephant', 'elephant', 'Gajah', 'hewan'),
+    ('lion', 'lion', 'Singa', 'hewan'),
+    ('tiger', 'tiger', 'Harimau', 'hewan'),
+    ('bear', 'bear', 'Beruang', 'hewan'),
+    ('monkey', 'monkey', 'Monyet', 'hewan'),
+    ('rabbit', 'rabbit', 'Kelinci', 'hewan'),
+    ('snake', 'snake', 'Ular', 'hewan'),
+    ('butterfly', 'butterfly', 'Kupu-kupu', 'hewan'),
+    ('bee', 'bee', 'Lebah', 'hewan'),
+    ('chicken', 'chicken', 'Ayam', 'hewan'),
+    ('duck', 'duck', 'Bebek', 'hewan'),
+    ('frog', 'frog', 'Katak', 'hewan'),
+    ('deer', 'deer', 'Rusa', 'hewan'),
+    ('mouse', 'mouse', 'Tikus', 'hewan'),
+    ('squirrel', 'squirrel', 'Tupai', 'hewan'),
+    ('fox', 'fox', 'Rubah', 'hewan'),
+    ('wolf', 'wolf', 'Serigala', 'hewan'),
+    ('zebra', 'zebra', 'Zebra', 'hewan'),
+    ('giraffe', 'giraffe', 'Jerapah', 'hewan'),
+    ('penguin', 'penguin', 'Penguin', 'hewan'),
+    ('whale', 'whale', 'Paus', 'hewan'),
+    ('dolphin', 'dolphin', 'Lumba-lumba', 'hewan'),
+    ('shark', 'shark', 'Hiu', 'hewan'),
+    ('turtle', 'turtle', 'Kura-kura', 'hewan'),
+    ('crab', 'crab', 'Kepiting', 'hewan'),
+    ('spider', 'spider', 'Laba-laba', 'hewan'),
+    ('ant', 'ant', 'Semut', 'hewan'),
+    ('owl', 'owl', 'Burung hantu', 'hewan'),
+    ('eagle', 'eagle', 'Elang', 'hewan'),
+    ('insect', 'insect', 'Serangga', 'hewan'),
+    ('crocodile', 'crocodile', 'Buaya', 'hewan'),
+    ('kangaroo', 'kangaroo', 'Kanguru', 'hewan'),
+    ('panda', 'panda', 'Panda', 'hewan'),
+    ('camel', 'camel', 'Unta', 'hewan'),
+    ('hamster', 'hamster', 'Hamster', 'hewan'),
+    ('pizza', 'pizza', 'Pizza', 'makanan'),
+    ('bread', 'bread', 'Roti', 'makanan'),
+    ('rice', 'rice', 'Nasi', 'makanan'),
+    ('noodle', 'noodles', 'Mie', 'makanan'),
+    ('apple', 'apple', 'Apel', 'makanan'),
+    ('banana', 'banana', 'Pisang', 'makanan'),
+    ('orange', 'orange', 'Jeruk', 'makanan'),
+    ('cake', 'cake', 'Kue', 'makanan'),
+    ('hamburger', 'hamburger', 'Burger', 'makanan'),
+    ('sandwich', 'sandwich', 'Roti lapis', 'makanan'),
+    ('cheese', 'cheese', 'Keju', 'makanan'),
+    ('egg', 'egg', 'Telur', 'makanan'),
+    ('meat', 'meat', 'Daging', 'makanan'),
+    ('vegetable', 'vegetable', 'Sayuran', 'makanan'),
+    ('salad', 'salad', 'Salad', 'makanan'),
+    ('soup', 'soup', 'Sup', 'makanan'),
+    ('ice cream', 'ice cream', 'Es krim', 'makanan'),
+    ('cookie', 'cookie', 'Kue kering', 'makanan'),
+    ('coffee', 'coffee', 'Kopi', 'makanan'),
+    ('tea', 'tea', 'Teh', 'makanan'),
+    ('fruit', 'fruit', 'Buah', 'makanan'),
+    ('food', 'food', 'Makanan', 'makanan'),
+    ('chocolate', 'chocolate', 'Cokelat', 'makanan'),
+    ('sushi', 'sushi', 'Sushi', 'makanan'),
+    ('fried chicken', 'fried chicken', 'Ayam goreng', 'makanan'),
+    ('french fries', 'french fries', 'Kentang goreng', 'makanan'),
+    ('donut', 'donut', 'Donat', 'makanan'),
+    ('watermelon', 'watermelon', 'Semangka', 'makanan'),
+    ('grape', 'grapes', 'Anggur', 'makanan'),
+    ('strawberry', 'strawberry', 'Stroberi', 'makanan'),
+    ('corn', 'corn', 'Jagung', 'makanan'),
+    ('tomato', 'tomato', 'Tomat', 'makanan'),
+    ('car', 'car', 'Mobil', 'kendaraan'),
+    ('truck', 'truck', 'Truk', 'kendaraan'),
+    ('bus', 'bus', 'Bus', 'kendaraan'),
+    ('bicycle', 'bicycle', 'Sepeda', 'kendaraan'),
+    ('motorcycle', 'motorcycle', 'Motor', 'kendaraan'),
+    ('airplane', 'airplane', 'Pesawat', 'kendaraan'),
+    ('boat', 'boat', 'Perahu', 'kendaraan'),
+    ('ship', 'ship', 'Kapal', 'kendaraan'),
+    ('train', 'train', 'Kereta', 'kendaraan'),
+    ('helicopter', 'helicopter', 'Helikopter', 'kendaraan'),
+    ('scooter', 'scooter', 'Skuter', 'kendaraan'),
+    ('taxi', 'taxi', 'Taksi', 'kendaraan'),
+    ('ambulance', 'ambulance', 'Ambulans', 'kendaraan'),
+    ('tractor', 'tractor', 'Traktor', 'kendaraan'),
+    ('van', 'van', 'Mobil van', 'kendaraan'),
+    ('chair', 'chair', 'Kursi', 'benda'),
+    ('table', 'table', 'Meja', 'benda'),
+    ('sofa', 'sofa', 'Sofa', 'benda'),
+    ('bed', 'bed', 'Tempat tidur', 'benda'),
+    ('lamp', 'lamp', 'Lampu', 'benda'),
+    ('clock', 'clock', 'Jam dinding', 'benda'),
+    ('bottle', 'bottle', 'Botol', 'benda'),
+    ('cup', 'cup', 'Cangkir', 'benda'),
+    ('mug', 'mug', 'Mug', 'benda'),
+    ('bowl', 'bowl', 'Mangkuk', 'benda'),
+    ('plate', 'plate', 'Piring', 'benda'),
+    ('knife', 'knife', 'Pisau', 'benda'),
+    ('fork', 'fork', 'Garpu', 'benda'),
+    ('spoon', 'spoon', 'Sendok', 'benda'),
+    ('book', 'book', 'Buku', 'benda'),
+    ('pen', 'pen', 'Pena', 'benda'),
+    ('phone', 'mobile phone', 'Ponsel', 'benda'),
+    ('laptop', 'laptop', 'Laptop', 'benda'),
+    ('computer', 'computer', 'Komputer', 'benda'),
+    ('keyboard', 'computer keyboard', 'Papan ketik', 'benda'),
+    ('computer mouse', 'computer mouse', 'Mouse komputer', 'benda'),
+    ('television', 'television', 'Televisi', 'benda'),
+    ('camera', 'camera', 'Kamera', 'benda'),
+    ('backpack', 'backpack', 'Tas ransel', 'benda'),
+    ('umbrella', 'umbrella', 'Payung', 'benda'),
+    ('shoe', 'shoe', 'Sepatu', 'benda'),
+    ('hat', 'hat', 'Topi', 'benda'),
+    ('glasses', 'glasses', 'Kacamata', 'benda'),
+    ('watch', 'wristwatch', 'Jam tangan', 'benda'),
+    ('key', 'key', 'Kunci', 'benda'),
+    ('bag', 'bag', 'Tas', 'benda'),
+    ('ball', 'ball', 'Bola', 'benda'),
+    ('scissors', 'scissors', 'Gunting', 'benda'),
+    ('hammer', 'hammer', 'Palu', 'benda'),
+    ('toothbrush', 'toothbrush', 'Sikat gigi', 'benda'),
+    ('mirror', 'mirror', 'Cermin', 'benda'),
+    ('pillow', 'pillow', 'Bantal', 'benda'),
+    ('blanket', 'blanket', 'Selimut', 'benda'),
+    ('curtain', 'curtain', 'Gorden', 'benda'),
+    ('vase', 'vase', 'Vas', 'benda'),
+    ('candle', 'candle', 'Lilin', 'benda'),
+    ('box', 'box', 'Kotak', 'benda'),
+    ('basket', 'basket', 'Keranjang', 'benda'),
+    ('refrigerator', 'refrigerator', 'Kulkas', 'benda'),
+    ('oven', 'oven', 'Oven', 'benda'),
+    ('microwave', 'microwave oven', 'Microwave', 'benda'),
+    ('sink', 'sink', 'Wastafel', 'benda'),
+    ('toilet', 'toilet', 'Toilet', 'benda'),
+    ('bathtub', 'bathtub', 'Bak mandi', 'benda'),
+    ('remote control', 'remote control', 'Remote TV', 'benda'),
+    ('headphones', 'headphones', 'Headphone', 'benda'),
+    ('guitar', 'guitar', 'Gitar', 'benda'),
+    ('toy', 'toy', 'Mainan', 'benda'),
+    ('teddy bear', 'teddy bear', 'Boneka beruang', 'benda'),
+    ('shirt', 'shirt', 'Kemeja', 'pakaian'),
+    ('t-shirt', 't-shirt', 'Kaos', 'pakaian'),
+    ('pants', 'pants', 'Celana', 'pakaian'),
+    ('dress', 'dress', 'Gaun', 'pakaian'),
+    ('jacket', 'jacket', 'Jaket', 'pakaian'),
+    ('coat', 'coat', 'Mantel', 'pakaian'),
+    ('skirt', 'skirt', 'Rok', 'pakaian'),
+    ('sock', 'sock', 'Kaus kaki', 'pakaian'),
+    ('sneaker', 'sneaker', 'Sepatu kets', 'pakaian'),
+    ('boot', 'boot', 'Sepatu bot', 'pakaian'),
+    ('glove', 'glove', 'Sarung tangan', 'pakaian'),
+    ('scarf', 'scarf', 'Syal', 'pakaian'),
+    ('street', 'street', 'Jalan', 'tempat'),
+    ('road', 'road', 'Jalan raya', 'tempat'),
+    ('sidewalk', 'sidewalk', 'Trotoar', 'tempat'),
+    ('city', 'city', 'Kota', 'tempat'),
+    ('village', 'village', 'Desa', 'tempat'),
+    ('kitchen', 'kitchen', 'Dapur', 'tempat'),
+    ('bedroom', 'bedroom', 'Kamar tidur', 'tempat'),
+    ('bathroom', 'bathroom', 'Kamar mandi', 'tempat'),
+    ('living room', 'living room', 'Ruang tamu', 'tempat'),
+    ('dining room', 'dining room', 'Ruang makan', 'tempat'),
+    ('office', 'office', 'Kantor', 'tempat'),
+    ('classroom', 'classroom', 'Kelas', 'tempat'),
+    ('restaurant', 'restaurant', 'Restoran', 'tempat'),
+    ('market', 'market', 'Pasar', 'tempat'),
+    ('store', 'store', 'Toko', 'tempat'),
+    ('airport', 'airport', 'Bandara', 'tempat'),
+    ('train station', 'train station', 'Stasiun kereta', 'tempat'),
+    ('playground', 'playground', 'Taman bermain', 'tempat'),
+    ('stadium', 'stadium', 'Stadion', 'tempat'),
+    ('farm', 'farm', 'Pertanian', 'tempat'),
+    ('factory', 'factory', 'Pabrik', 'tempat'),
+    ('construction site', 'construction site', 'Konstruksi', 'tempat'),
+    ('sunset', 'sunset', 'Matahari terbenam', 'tempat'),
+    ('sunrise', 'sunrise', 'Matahari terbit', 'tempat'),
+    ('night', 'night', 'Malam', 'tempat'),
+    ('room', 'room', 'Ruangan', 'tempat'),
+    ('library', 'library', 'Perpustakaan', 'tempat'),
+    ('swimming pool', 'swimming pool', 'Kolam renang', 'tempat'),
+
+)
+
+
+def _article(name: str) -> str:
+    return "an" if name[:1].lower() in "aeiou" else "a"
+
+
+def prompt_texts(label: GeneralLabel) -> tuple[str, ...]:
+    """Kalimat CLIP untuk satu label. Label khusus tidak memakai prompt bawaan."""
+    if label.prompts:
+        return label.prompts
+    article = _article(label.name_en)
+    return (f"a photo of {article} {label.name_en}.",)
+
+
+LABELS: tuple[GeneralLabel, ...] = tuple(
+    GeneralLabel(
+        key=key,
+        name_en=name_en,
+        name_id=name_id,
+        category=category,
+        prompts=SPECIAL_PROMPTS.get(key, ()),
+    )
+    for key, name_en, name_id, category in _ROWS
+)
+
+_BY_ID = {label.name_id: label for label in LABELS}
+
+
+def label_by_id(name_id: str) -> GeneralLabel | None:
+    return _BY_ID.get(name_id)
+
+
+def labels_by_category() -> tuple[tuple[str, tuple[GeneralLabel, ...]], ...]:
+    grouped: dict[str, list[GeneralLabel]] = {key: [] for key, _title in CATEGORIES}
+    for label in LABELS:
+        grouped[label.category].append(label)
+    return tuple((title, tuple(grouped[key])) for key, title in CATEGORIES)
