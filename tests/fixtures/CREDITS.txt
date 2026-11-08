@@ -1,0 +1,15 @@
+person.jpg
+  Portrait photo from Unsplash (photo-1507003211169).
+  https://unsplash.com/photos/1507003211169-0a1dd7228f2d
+  Unsplash License.
+
+house.jpg
+  House photo from Unsplash (photo-1570129477492).
+  https://unsplash.com/photos/1570129477492-45c003edd2be
+  Unsplash License.
+
+rock.jpg
+  "Rock-1350020, Dingle Peninsula, Co. Kerry, Ireland" by Maoileann.
+  Wikimedia Commons, CC BY-SA 4.0.
+  https://commons.wikimedia.org/wiki/File:Rock-1350020,_Dingle_Peninsula,_Co._Kerry,_Ireland.jpg
+  https://creativecommons.org/licenses/by-sa/4.0/
