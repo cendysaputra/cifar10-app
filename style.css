@@ -175,15 +175,10 @@ div[data-testid="stButtonGroup"] button {
     min-height: 44px;
 }
 
-.footer-identitas {
-    font-size: 15px;
-    color: #5b6470;
-    margin-bottom: 2rem;
-}
-
 .footer-kelas {
     font-size: 15px;
     color: #5b6470;
+    margin-bottom: 2rem;
 }
 
 .etxdrby3 {
