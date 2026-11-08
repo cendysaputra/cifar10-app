@@ -9,3 +9,5 @@ venv/
 *.log
 *.onnx
 *.part
+data/
+checkpoints/
