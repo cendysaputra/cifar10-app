@@ -43,6 +43,14 @@ def test_valid_upload_shows_a_prediction():
     assert "Hasil prediksi" in html
     assert any(name in html for name in CLASS_NAMES)
     assert app.expander[0].label == "Semua kelas"
+    bar_html = " ".join(
+        block.value for block in app.markdown if 'role="progressbar"' in block.value
+    )
+    assert bar_html.count("bar-track") >= 3
+    assert "\n\n" not in bar_html
+    for line in bar_html.splitlines():
+        if line.strip().startswith("<"):
+            assert not line.startswith(" ")
 
 
 def test_invalid_upload_is_rejected_without_a_traceback():

@@ -31,6 +31,19 @@ def load_css(path: Path) -> None:
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
+def probability_bar_html(label: str, probability: float) -> str:
+    """HTML satu batang. Tanpa indentasi, agar Markdown tidak mengubahnya jadi kode."""
+    persen = max(0.0, min(100.0, probability * 100))
+    safe = escape(label)
+    return (
+        '<div class="bar-label">'
+        f"<span>{safe}</span><span>{persen:.2f}%</span></div>"
+        '<div class="bar-track" role="progressbar" aria-valuemin="0" '
+        f'aria-valuemax="100" aria-valuenow="{persen:.1f}" aria-label="{safe}">'
+        f'<div class="bar-fill" style="width: {persen:.2f}%;"></div></div>'
+    )
+
+
 def predict(model, image: Image.Image):
     raw = np.asarray(model(preprocess(image), training=False))
     return summarize_prediction(raw)
@@ -102,19 +115,7 @@ if uploaded_file is not None:
             '<div role="group" aria-labelledby="judul-top3">',
         ]
         for item in prediction.ranking[:3]:
-            persen = max(0.0, min(100.0, item.probability * 100))
-            label = escape(item.label)
-            bars.append(
-                f"""
-                <div class="bar-label">
-                    <span>{label}</span>
-                    <span>{persen:.2f}%</span>
-                </div>
-                <div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{persen:.1f}" aria-label="{label}">
-                    <div class="bar-fill" style="width: {persen:.2f}%;"></div>
-                </div>
-                """
-            )
+            bars.append(probability_bar_html(item.label, item.probability))
         bars.append("</div>")
 
         col1, col2 = st.columns([1, 1.3])
