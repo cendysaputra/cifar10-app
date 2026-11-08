@@ -2,6 +2,8 @@ streamlit==1.59.2
 tensorflow-cpu==2.21.0
 pillow==12.0.0
 numpy==2.2.6
+# Mode Umum: CLIP ViT-B/32 terkuantisasi. Bobot vision diunduh saat runtime, bukan lewat pip.
+onnxruntime==1.23.2
 # Starlette 1.8 mengirim body gambar sebelum header lewat gzip middleware Streamlit 1.59,
 # sehingga foto yang diunggah gagal dimuat (HTTP 500).
 starlette==1.7.0
