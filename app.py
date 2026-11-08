@@ -178,7 +178,6 @@ def render_footer(class_line: str) -> None:
     st.markdown(
         f"""
         <div class="footer-kelas">{class_line}</div>
-        <div class="footer-identitas">2026 Group 6 - Artificial Intelligence (JTCA)</div>
         """,
         unsafe_allow_html=True,
     )
