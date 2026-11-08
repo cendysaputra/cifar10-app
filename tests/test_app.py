@@ -29,6 +29,7 @@ def test_home_explains_the_input_and_lists_classes():
     assert control.value == "CIFAR-10"
     assert control.proto.label == "Mode klasifikasi"
     assert "32×32" in app.caption[0].value
+    assert "cermin horizontal" in app.caption[0].value
     allowed = {item.lstrip(".") for item in app.file_uploader[0].allowed_type}
     assert {"jpg", "jpeg", "png", "webp"} <= allowed
     footer = " ".join(block.value for block in app.markdown)
