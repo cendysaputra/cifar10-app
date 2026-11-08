@@ -7,5 +7,7 @@ venv/
 .streamlit/secrets.toml
 .DS_Store
 *.log
+*.onnx
+*.part
 data/
 checkpoints/
