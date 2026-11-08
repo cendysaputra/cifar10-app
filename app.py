@@ -10,6 +10,8 @@ from PIL import Image
 from classify import (
     CLASS_NAMES,
     ImageLoadError,
+    average_probabilities,
+    horizontal_flip,
     load_image,
     model_path,
     preprocess,
@@ -48,8 +50,10 @@ def probability_bar_html(label: str, probability: float) -> str:
 
 
 def predict(model, image: Image.Image):
-    raw = np.asarray(model(preprocess(image), training=False))
-    return summarize_prediction(raw)
+    batch = preprocess(image)
+    views = np.concatenate([batch, horizontal_flip(batch)], axis=0)
+    raw = np.asarray(model(views, training=False))
+    return summarize_prediction(average_probabilities(raw))
 
 
 @st.cache_data(show_spinner=False)
@@ -202,7 +206,8 @@ if mode == MODE_CIFAR:
     st.write("Model CNN memprediksi objek dari gambar yang diunggah.")
     st.caption(
         "Gambar diubah menjadi 32×32 piksel. Foto yang tidak persegi di-crop dari tengah, "
-        "jadi objek sebaiknya berada di tengah bingkai."
+        "jadi objek sebaiknya berada di tengah bingkai. Prediksi merata-ratakan gambar "
+        "dengan cermin horizontalnya."
     )
     model = None
     try:
@@ -240,7 +245,7 @@ if mode == MODE_CIFAR:
             render_prediction(
                 preview,
                 prediction,
-                image_note="Model melihat crop tengah berukuran 32×32 piksel.",
+                image_note="Model melihat crop tengah 32×32 dan cermin horizontalnya.",
                 heading="3 kelas teratas",
                 top_n=3,
                 headline=prediction.label,

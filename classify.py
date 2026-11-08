@@ -25,7 +25,7 @@ CLASS_NAMES: tuple[str, ...] = (
     "Truck",
 )
 
-MODEL_FILENAME = "model_cnn_cifar10_v4.h5"
+MODEL_FILENAME = "model_cnn_cifar10_v5.h5"
 MODEL_INPUT_SIZE = 32
 PREVIEW_MAX_SIDE = 512
 # Batasi decode agar file kecil tidak berkembang menjadi gambar raksasa.
@@ -109,6 +109,27 @@ def preprocess(image: Image.Image) -> np.ndarray:
     if array.shape != (MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, 3):
         raise ImageLoadError("Gambar tidak dapat diubah ke ukuran masukan model.")
     return array[np.newaxis, ...]
+
+
+def horizontal_flip(batch: np.ndarray) -> np.ndarray:
+    """Salinan batch NHWC yang dicerminkan pada sumbu lebar."""
+    array = np.asarray(batch)
+    if array.ndim != 4:
+        raise ValueError("Batch cermin harus berbentuk (N, tinggi, lebar, kanal).")
+    return np.ascontiguousarray(np.flip(array, axis=2))
+
+
+def average_probabilities(views: np.ndarray) -> np.ndarray:
+    """Rata-rata beberapa vektor 10 kelas, misalnya gambar asli dan cerminnya."""
+    rows = np.asarray(views, dtype=np.float64)
+    if rows.ndim != 2 or rows.shape[0] < 1 or rows.shape[1] != len(CLASS_NAMES):
+        raise ValueError(
+            f"Rata-rata membutuhkan bentuk (tampilan, {len(CLASS_NAMES)}), "
+            f"diterima {tuple(np.asarray(views).shape)}."
+        )
+    if not np.all(np.isfinite(rows)):
+        raise ValueError("Probabilitas berisi nilai yang tidak valid.")
+    return rows.mean(axis=0)
 
 
 def class_probabilities(output: np.ndarray) -> np.ndarray:

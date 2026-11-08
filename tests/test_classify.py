@@ -10,7 +10,9 @@ from classify import (
     MODEL_FILENAME,
     MODEL_INPUT_SIZE,
     ImageLoadError,
+    average_probabilities,
     class_probabilities,
+    horizontal_flip,
     load_image,
     model_path,
     preprocess,
@@ -150,6 +152,38 @@ def test_load_image_reads_webp():
     image.save(buffer, format="WEBP", lossless=True)
     loaded = load_image(buffer.getvalue())
     assert loaded.getpixel((0, 0)) == (9, 8, 7)
+
+
+def test_horizontal_flip_mirrors_the_width_axis():
+    batch = np.zeros((1, 2, 3, 3), dtype=np.float32)
+    batch[0, 0, 0, 0] = 1
+    flipped = horizontal_flip(batch)
+    assert flipped.shape == batch.shape
+    assert flipped[0, 0, -1, 0] == pytest.approx(1)
+    assert flipped[0, 0, 0, 0] == pytest.approx(0)
+    assert np.shares_memory(flipped, batch) is False
+
+
+def test_average_probabilities_means_the_two_views():
+    views = np.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        ],
+        dtype=np.float32,
+    )
+    averaged = average_probabilities(views)
+    assert averaged.shape == (10,)
+    assert averaged[0] == pytest.approx(0.5)
+    assert averaged[1] == pytest.approx(0.5)
+    summary = summarize_prediction(averaged)
+    assert summary.label in {"Airplane", "Automobile"}
+    assert summary.confidence == pytest.approx(0.5)
+
+
+def test_average_probabilities_rejects_a_single_vector_shape():
+    with pytest.raises(ValueError):
+        average_probabilities(np.zeros(10))
 
 
 def test_class_probabilities_reject_bad_shapes_and_values():
