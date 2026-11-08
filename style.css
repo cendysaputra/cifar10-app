@@ -157,11 +157,22 @@ button[title="View fullscreen"] {display: none;}
     border-radius: 5px;
 }
 
+.judul-peringkat,
 .judul-top3 {
     font-size: 15px;
     font-weight: 600;
     color: #3d4753;
     margin-bottom: 12px;
+}
+
+.hasil-en {
+    font-size: 15px;
+    color: #5b6470;
+    margin-top: 2px;
+}
+
+div[data-testid="stButtonGroup"] button {
+    min-height: 44px;
 }
 
 .footer-identitas {
